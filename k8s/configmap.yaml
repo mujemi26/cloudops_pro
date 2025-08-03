@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudops-pro-config
+  labels:
+    app: cloudops-pro
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  NEXT_PUBLIC_APP_URL: "https://cloudops-pro.local" 

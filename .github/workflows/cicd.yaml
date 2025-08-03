@@ -1,0 +1,210 @@
+name: CI/CD Pipeline
+
+on:
+  # push:
+  #   branches: [ dev ]
+  # pull_request:
+  #   branches: [ dev ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - production
+
+env:
+  DOCKER_IMAGE: cloudops-pro
+  DOCKER_REGISTRY: docker.io
+  GITOPS_REPO: mujemi26/GitOps
+  GITOPS_BRANCH: main
+  GITOPS_PATH: Manifests/CloudOps-pro
+
+jobs:
+  # CI Job - Build and Push Docker Image
+  ci:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Output image info
+      run: |
+        echo "Image: ${{ steps.meta.outputs.tags }}"
+        echo "Digest: ${{ steps.meta.outputs.digest }}"
+        
+    - name: Set image output
+      id: image
+      run: |
+        echo "image=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        echo "digest=${{ steps.meta.outputs.digest }}" >> $GITHUB_OUTPUT
+
+  # CD Job - GitOps Deployment
+  cd:
+    name: Deploy to Kubernetes via GitOps
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Checkout GitOps repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.GITOPS_REPO }}
+        token: ${{ secrets.GITOPS_TOKEN }}
+        path: Manifests/CloudOps-pro
+        
+    - name: Setup GitOps
+      run: |
+        cd Manifests/CloudOps-pro
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+    - name: Update deployment image
+      id: update-image
+      run: |
+        cd Manifests/CloudOps-pro
+        
+        # Get the new image tag
+        NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        echo "New image: $NEW_IMAGE"
+        
+        # Update deployment.yaml with new image
+        if [ -f "${{ env.GITOPS_PATH }}/deployment.yaml" ]; then
+          # Update image in deployment
+          sed -i "s|image:.*|image: $NEW_IMAGE|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
+          
+          # Update image tag in deployment
+          sed -i "s|tag:.*|tag: ${{ github.sha }}|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
+          
+          echo "Updated deployment with image: $NEW_IMAGE"
+        else
+          echo "Deployment file not found at ${{ env.GITOPS_PATH }}/deployment.yaml"
+          exit 1
+        fi
+        
+    - name: Commit and push changes
+      run: |
+        cd Manifests/CloudOps-pro
+        
+        # Check if there are changes
+        if git diff --quiet; then
+          echo "No changes to commit"
+        else
+          # Add all changes
+          git add .
+          
+          # Commit with meaningful message
+          COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }}"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            COMMIT_MSG="$COMMIT_MSG (Manual deployment to ${{ github.event.inputs.environment }})"
+          fi
+          
+          git commit -m "$COMMIT_MSG"
+          
+          # Push to GitOps repository
+          git push origin ${{ env.GITOPS_BRANCH }}
+          
+          echo "Pushed changes to GitOps repository"
+        fi
+        
+    - name: Wait for ArgoCD sync
+      run: |
+        echo "Waiting for ArgoCD to detect changes..."
+        echo "ArgoCD will automatically sync the deployment"
+        echo "You can monitor the sync status in your ArgoCD dashboard"
+        
+    - name: Notify deployment
+      run: |
+        echo "🚀 Deployment initiated!"
+        echo "Image: ${{ needs.ci.outputs.image }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "ArgoCD will sync automatically"
+
+  # Security Scan Job
+  # security-scan:
+  #   name: Security Scan
+  #   runs-on: ubuntu-latest
+    
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+      
+  #   - name: Run Trivy vulnerability scanner
+  #     uses: aquasecurity/trivy-action@master
+  #     with:
+  #       image-ref: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+  #       format: 'sarif'
+  #       output: 'trivy-results.sarif'
+        
+  #   - name: Upload Trivy scan results to GitHub Security tab
+  #     uses: github/codeql-action/upload-sarif@v3
+  #     if: always()
+  #     with:
+  #       sarif_file: 'trivy-results.sarif'
+
+  # Test Job
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-latest
+    
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+      
+  #   - name: Setup Node.js
+  #     uses: actions/setup-node@v4
+  #     with:
+  #       node-version: '18'
+  #       cache: 'npm'
+        
+  #   - name: Install dependencies
+  #     run: npm ci
+      
+  #   - name: Run linting
+  #     run: npm run lint
+      
+  #   - name: Run tests (if available)
+  #     run: npm test --if-present
+      
+  #   - name: Build application
+  #     run: npm run build
