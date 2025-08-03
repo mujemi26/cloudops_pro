@@ -15,7 +15,7 @@ on:
 env:
   DOCKER_IMAGE: cloudops-pro
   DOCKER_REGISTRY: docker.io
-  GITOPS_REPO: https://github.com/mujemi26/GitOps.git
+  GITOPS_REPO: mujemi26/GitOps
   GITOPS_BRANCH: main
   GITOPS_PATH: Manifests/CloudOps-pro
 
@@ -76,17 +76,17 @@ jobs:
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
-        path: gitops-repo
+        path: Manifests/CloudOps-pro
         
     - name: Setup GitOps
       run: |
-        cd gitops-repo
+        cd Manifests/CloudOps-pro
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
     - name: Update deployment image
       run: |
-        cd gitops-repo
+        cd Manifests/CloudOps-pro
         
         # Get the new image tag
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
@@ -121,7 +121,7 @@ jobs:
         
     - name: Commit and push changes
       run: |
-        cd gitops-repo
+        cd Manifests/CloudOps-pro
         
         # Check if there are changes
         if git diff --quiet; then
