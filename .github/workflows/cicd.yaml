@@ -1,10 +1,6 @@
 name: CI/CD Pipeline
 
 on:
-  # push:
-  #   branches: [ dev ]
-  # pull_request:
-  #   branches: [ dev ]
   workflow_dispatch:
     inputs:
       environment:
@@ -42,83 +38,39 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
         
-    - name: Generate version tag
+    - name: Generate version
       id: version
       run: |
-        # Get current date for versioning
-        DATE=$(date +%Y%m%d)
-        
-        # Get commit count for this branch to create incremental version
         COMMIT_COUNT=$(git rev-list --count HEAD)
-        
-        # Create semantic version (v0.1, v0.2, etc.)
         VERSION="v0.$COMMIT_COUNT"
-        
-        # Create full version with date
-        FULL_VERSION="${VERSION}-${DATE}"
-        
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
-        echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
-        
         echo "Generated version: $VERSION"
-        echo "Full version: $FULL_VERSION"
-        echo "Commit count: $COMMIT_COUNT"
         
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}
-        tags: |
-          type=raw,value=${{ steps.version.outputs.version }}
-          type=raw,value=${{ steps.version.outputs.full_version }}
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=sha,prefix={{branch}}-
-          
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        
-    - name: Output image info
-      run: |
-        echo "All tags: ${{ steps.meta.outputs.tags }}"
-        echo "Version: ${{ steps.version.outputs.version }}"
-        echo "Full version: ${{ steps.version.outputs.full_version }}"
-        echo "Commit count: ${{ steps.version.outputs.commit_count }}"
-        echo "Digest: ${{ steps.meta.outputs.digest }}"
         
     - name: Set image output
       id: image
       run: |
-        # Use the semantic version as the primary tag
-        VERSION_TAG="${{ steps.version.outputs.version }}"
-        FULL_IMAGE="${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:$VERSION_TAG"
-        
-        echo "image=$FULL_IMAGE" >> $GITHUB_OUTPUT
-        echo "version=$VERSION_TAG" >> $GITHUB_OUTPUT
-        echo "digest=${{ steps.meta.outputs.digest }}" >> $GITHUB_OUTPUT
-        
-        echo "Primary image tag: $FULL_IMAGE"
-        echo "Version: $VERSION_TAG"
+        IMAGE_TAG="${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}"
+        echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+        echo "Image: $IMAGE_TAG"
 
   # CD Job - GitOps Deployment
   cd:
     name: Deploy to Kubernetes via GitOps
     runs-on: ubuntu-latest
     needs: ci
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
     - name: Checkout GitOps repository
       uses: actions/checkout@v4
       with:
@@ -133,52 +85,28 @@ jobs:
         git config user.email "actions@github.com"
         
     - name: Update deployment image
-      id: update-image
       run: |
         cd gitops-repo
         
-        # Debug: List directory contents
-        echo "Current directory: $(pwd)"
-        echo "Directory contents:"
-        ls -la
-        
         # Get the new image tag
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        VERSION="${{ needs.ci.outputs.version }}"
         echo "New image: $NEW_IMAGE"
+        echo "Version: $VERSION"
         
-        # Check if deployment file exists in the correct path
+        # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
         if [ -f "$DEPLOYMENT_FILE" ]; then
-          echo "Found deployment file at $DEPLOYMENT_FILE"
-          # Show current content
-          echo "Current deployment content:"
-          cat "$DEPLOYMENT_FILE"
-          
-          # Update image in deployment
           sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
-          
           echo "Updated deployment with image: $NEW_IMAGE"
-          echo "Updated deployment content:"
-          cat "$DEPLOYMENT_FILE"
         else
           echo "Deployment file not found at $DEPLOYMENT_FILE"
-          echo "Available files in Manifests/CloudOps-pro:"
-          ls -la "Manifests/CloudOps-pro" || echo "Directory does not exist"
-          echo "Available files in Manifests:"
-          ls -la "Manifests" || echo "Directory does not exist"
           exit 1
         fi
         
     - name: Commit and push changes
       run: |
         cd gitops-repo
-        
-        # Debug: Check current branch and remote
-        echo "Current branch: $(git branch --show-current)"
-        echo "Available branches:"
-        git branch -a
-        echo "Remote branches:"
-        git branch -r
         
         # Check if there are changes
         if git diff --quiet; then
@@ -187,7 +115,7 @@ jobs:
           # Add all changes
           git add .
           
-          # Commit with meaningful message including version
+          # Commit with version info
           VERSION="${{ needs.ci.outputs.version }}"
           COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }} (Version: $VERSION)"
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -196,121 +124,17 @@ jobs:
           
           git commit -m "$COMMIT_MSG"
           
-          # Try to push to the correct branch
+          # Push to current branch
           CURRENT_BRANCH=$(git branch --show-current)
-          echo "Pushing to branch: $CURRENT_BRANCH"
           git push origin $CURRENT_BRANCH
           
           echo "Pushed changes to GitOps repository"
         fi
         
-    - name: Wait for ArgoCD sync
-      run: |
-        echo "Waiting for ArgoCD to detect changes..."
-        echo "ArgoCD will automatically sync the deployment"
-        echo "You can monitor the sync status in your ArgoCD dashboard"
-        
-    - name: Debug version output
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        echo "CI outputs:"
-        echo "  image: ${{ needs.ci.outputs.image }}"
-        echo "  version: ${{ needs.ci.outputs.version }}"
-        echo "  digest: ${{ needs.ci.outputs.digest }}"
-        
-    - name: Set release version
-      if: github.event_name == 'workflow_dispatch'
-      id: release
-      run: |
-        # Get version from CI job, or generate a fallback
-        VERSION="${{ needs.ci.outputs.version }}"
-        if [ -z "$VERSION" ]; then
-          # Generate fallback version
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION="v0.$COMMIT_COUNT"
-        fi
-        echo "release_version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Using version: $VERSION"
-        
-    - name: Create GitHub Release
-      if: github.event_name == 'workflow_dispatch'
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.release.outputs.release_version }}
-        release_name: CloudOps Pro ${{ steps.release.outputs.release_version }}
-        body: |
-          ## CloudOps Pro ${{ steps.release.outputs.release_version }}
-          
-          ### Changes
-          - Updated Docker image to ${{ needs.ci.outputs.image }}
-          - Deployed to ${{ github.event.inputs.environment }} environment
-          
-          ### Docker Image
-          ```
-          ${{ needs.ci.outputs.image }}
-          ```
-          
-          ### Commit
-          ${{ github.sha }}
-        draft: false
-        prerelease: false
-        
     - name: Notify deployment
       run: |
-        echo "🚀 Deployment initiated!"
+        echo "🚀 Deployment completed!"
         echo "Image: ${{ needs.ci.outputs.image }}"
         echo "Version: ${{ needs.ci.outputs.version }}"
-        echo "Commit: ${{ github.sha }}"
-        echo "Branch: ${{ github.ref_name }}"
+        echo "Environment: ${{ github.event.inputs.environment }}"
         echo "ArgoCD will sync automatically"
-
-  # Security Scan Job
-  # security-scan:
-  #   name: Security Scan
-  #   runs-on: ubuntu-latest
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Run Trivy vulnerability scanner
-  #     uses: aquasecurity/trivy-action@master
-  #     with:
-  #       image-ref: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-  #       format: 'sarif'
-  #       output: 'trivy-results.sarif'
-        
-  #   - name: Upload Trivy scan results to GitHub Security tab
-  #     uses: github/codeql-action/upload-sarif@v3
-  #     if: always()
-  #     with:
-  #       sarif_file: 'trivy-results.sarif'
-
-  # Test Job
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
-  #       cache: 'npm'
-        
-  #   - name: Install dependencies
-  #     run: npm ci
-      
-  #   - name: Run linting
-  #     run: npm run lint
-      
-  #   - name: Run tests (if available)
-  #     run: npm test --if-present
-      
-  #   - name: Build application
-  #     run: npm run build
