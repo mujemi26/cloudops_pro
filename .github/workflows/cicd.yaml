@@ -15,7 +15,7 @@ on:
 env:
   DOCKER_IMAGE: cloudops-pro
   DOCKER_REGISTRY: docker.io
-  GITOPS_REPO: mujemi26/GitOps
+  GITOPS_REPO: https://github.com/mujemi26/GitOps.git
   GITOPS_BRANCH: main
   GITOPS_PATH: Manifests/CloudOps-pro
 
