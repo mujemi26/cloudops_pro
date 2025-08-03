@@ -210,16 +210,38 @@ jobs:
         echo "ArgoCD will automatically sync the deployment"
         echo "You can monitor the sync status in your ArgoCD dashboard"
         
+    - name: Debug version output
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        echo "CI outputs:"
+        echo "  image: ${{ needs.ci.outputs.image }}"
+        echo "  version: ${{ needs.ci.outputs.version }}"
+        echo "  digest: ${{ needs.ci.outputs.digest }}"
+        
+    - name: Set release version
+      if: github.event_name == 'workflow_dispatch'
+      id: release
+      run: |
+        # Get version from CI job, or generate a fallback
+        VERSION="${{ needs.ci.outputs.version }}"
+        if [ -z "$VERSION" ]; then
+          # Generate fallback version
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION="v0.$COMMIT_COUNT"
+        fi
+        echo "release_version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Using version: $VERSION"
+        
     - name: Create GitHub Release
       if: github.event_name == 'workflow_dispatch'
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ needs.ci.outputs.version }}
-        release_name: CloudOps Pro ${{ needs.ci.outputs.version }}
+        tag_name: ${{ steps.release.outputs.release_version }}
+        release_name: CloudOps Pro ${{ steps.release.outputs.release_version }}
         body: |
-          ## CloudOps Pro ${{ needs.ci.outputs.version }}
+          ## CloudOps Pro ${{ steps.release.outputs.release_version }}
           
           ### Changes
           - Updated Docker image to ${{ needs.ci.outputs.image }}
