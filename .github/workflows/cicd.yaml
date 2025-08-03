@@ -107,17 +107,37 @@ jobs:
           echo "Current deployment content:"
           cat "$DEPLOYMENT_FILE"
           
-          # Update image field - handles both empty and non-empty image fields
+          # Enhanced image replacement - handles various scenarios
+          echo "Replacing image with: $NEW_IMAGE"
+          
+          # Method 1: Replace any image line (empty or with content)
           sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
           
-          # If the above didn't work (empty image field), try a different approach
+          # Method 2: If Method 1 didn't work, find and replace the specific image line
           if ! grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
-            echo "First sed didn't work, trying alternative approach..."
-            # Find the line with 'image:' and replace the entire line
+            echo "Method 1 didn't work, trying Method 2..."
+            # Find the line with 'image:' and replace the entire line with proper indentation
             sed -i "/image:/c\        image: $NEW_IMAGE" "$DEPLOYMENT_FILE"
           fi
           
-          echo "Updated deployment with image: $NEW_IMAGE"
+          # Method 3: If still not working, use awk to replace the image line
+          if ! grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
+            echo "Method 2 didn't work, trying Method 3 with awk..."
+            awk -v new_image="$NEW_IMAGE" '
+              /image:/ { print "        image: " new_image; next }
+              { print }
+            ' "$DEPLOYMENT_FILE" > "$DEPLOYMENT_FILE.tmp" && mv "$DEPLOYMENT_FILE.tmp" "$DEPLOYMENT_FILE"
+          fi
+          
+          # Verify the update worked
+          if grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
+            echo "✅ Successfully updated deployment with image: $NEW_IMAGE"
+          else
+            echo "❌ Failed to update image. Current content:"
+            cat "$DEPLOYMENT_FILE"
+            exit 1
+          fi
+          
           echo "Updated deployment content:"
           cat "$DEPLOYMENT_FILE"
         else
