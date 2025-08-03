@@ -81,18 +81,14 @@ jobs:
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
-        path: gitops-repo
         
     - name: Setup GitOps
       run: |
-        cd gitops-repo
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
     - name: Update deployment image
       run: |
-        cd gitops-repo
-        
         # Get the new image tag
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
         VERSION="${{ needs.ci.outputs.version }}"
@@ -131,8 +127,6 @@ jobs:
         
     - name: Commit and push changes
       run: |
-        cd gitops-repo
-        
         # Check if there are changes
         if git diff --quiet; then
           echo "No changes to commit"
