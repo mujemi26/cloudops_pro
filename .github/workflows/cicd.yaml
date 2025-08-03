@@ -62,6 +62,11 @@ jobs:
         echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
         echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
         echo "Image: $IMAGE_TAG"
+        
+    - name: Set job outputs
+      run: |
+        echo "image=${{ steps.image.outputs.image }}" >> $GITHUB_OUTPUT
+        echo "version=${{ steps.image.outputs.version }}" >> $GITHUB_OUTPUT
 
   # CD Job - GitOps Deployment
   cd:
@@ -76,17 +81,17 @@ jobs:
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
-        path: Manifests/CloudOps-pro
+        path: gitops-repo
         
     - name: Setup GitOps
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
     - name: Update deployment image
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
         
         # Get the new image tag
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
@@ -94,8 +99,13 @@ jobs:
         echo "New image: $NEW_IMAGE"
         echo "Version: $VERSION"
         
+        # Debug: Check if outputs are available
+        echo "CI outputs:"
+        echo "  image: ${{ needs.ci.outputs.image }}"
+        echo "  version: ${{ needs.ci.outputs.version }}"
+        
         # Update deployment.yaml
-        DEPLOYMENT_FILE="deployment.yaml"
+        DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
         if [ -f "$DEPLOYMENT_FILE" ]; then
           # Show current content for debugging
           echo "Current deployment content:"
@@ -121,7 +131,7 @@ jobs:
         
     - name: Commit and push changes
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
         
         # Check if there are changes
         if git diff --quiet; then
