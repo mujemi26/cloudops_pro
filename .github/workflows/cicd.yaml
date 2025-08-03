@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.image.outputs.image }}
-      version: ${{ steps.image.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     
     steps:
     - name: Checkout code
@@ -66,13 +66,7 @@ jobs:
         echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
         echo "Image: $IMAGE_TAG"
         
-    - name: Set job outputs
-      run: |
-        echo "image=${{ steps.image.outputs.image }}" >> $GITHUB_OUTPUT
-        echo "version=${{ steps.image.outputs.version }}" >> $GITHUB_OUTPUT
-        echo "Debug - Job outputs:"
-        echo "  image: ${{ steps.image.outputs.image }}"
-        echo "  version: ${{ steps.image.outputs.version }}"
+
 
   # CD Job - GitOps Deployment
   cd:
