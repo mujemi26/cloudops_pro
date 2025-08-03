@@ -42,16 +42,39 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
         
+    - name: Generate version tag
+      id: version
+      run: |
+        # Get current date for versioning
+        DATE=$(date +%Y%m%d)
+        
+        # Get commit count for this branch to create incremental version
+        COMMIT_COUNT=$(git rev-list --count HEAD)
+        
+        # Create semantic version (v0.1, v0.2, etc.)
+        VERSION="v0.$COMMIT_COUNT"
+        
+        # Create full version with date
+        FULL_VERSION="${VERSION}-${DATE}"
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+        echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+        
+        echo "Generated version: $VERSION"
+        echo "Full version: $FULL_VERSION"
+        echo "Commit count: $COMMIT_COUNT"
+        
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}
         tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=raw,value=${{ steps.version.outputs.version }}
+          type=raw,value=${{ steps.version.outputs.full_version }}
           type=raw,value=latest,enable={{is_default_branch}}
+          type=sha,prefix={{branch}}-
           
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -66,16 +89,24 @@ jobs:
     - name: Output image info
       run: |
         echo "All tags: ${{ steps.meta.outputs.tags }}"
-        echo "First tag: $(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
+        echo "Version: ${{ steps.version.outputs.version }}"
+        echo "Full version: ${{ steps.version.outputs.full_version }}"
+        echo "Commit count: ${{ steps.version.outputs.commit_count }}"
         echo "Digest: ${{ steps.meta.outputs.digest }}"
         
     - name: Set image output
       id: image
       run: |
-        # Get the first tag (usually the main one we want)
-        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-        echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        # Use the semantic version as the primary tag
+        VERSION_TAG="${{ steps.version.outputs.version }}"
+        FULL_IMAGE="${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:$VERSION_TAG"
+        
+        echo "image=$FULL_IMAGE" >> $GITHUB_OUTPUT
+        echo "version=$VERSION_TAG" >> $GITHUB_OUTPUT
         echo "digest=${{ steps.meta.outputs.digest }}" >> $GITHUB_OUTPUT
+        
+        echo "Primary image tag: $FULL_IMAGE"
+        echo "Version: $VERSION_TAG"
 
   # CD Job - GitOps Deployment
   cd:
@@ -156,8 +187,9 @@ jobs:
           # Add all changes
           git add .
           
-          # Commit with meaningful message
-          COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }}"
+          # Commit with meaningful message including version
+          VERSION="${{ needs.ci.outputs.version }}"
+          COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }} (Version: $VERSION)"
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             COMMIT_MSG="$COMMIT_MSG (Manual deployment to ${{ github.event.inputs.environment }})"
           fi
@@ -178,10 +210,36 @@ jobs:
         echo "ArgoCD will automatically sync the deployment"
         echo "You can monitor the sync status in your ArgoCD dashboard"
         
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.ci.outputs.version }}
+        release_name: CloudOps Pro ${{ needs.ci.outputs.version }}
+        body: |
+          ## CloudOps Pro ${{ needs.ci.outputs.version }}
+          
+          ### Changes
+          - Updated Docker image to ${{ needs.ci.outputs.image }}
+          - Deployed to ${{ github.event.inputs.environment }} environment
+          
+          ### Docker Image
+          ```
+          ${{ needs.ci.outputs.image }}
+          ```
+          
+          ### Commit
+          ${{ github.sha }}
+        draft: false
+        prerelease: false
+        
     - name: Notify deployment
       run: |
         echo "🚀 Deployment initiated!"
         echo "Image: ${{ needs.ci.outputs.image }}"
+        echo "Version: ${{ needs.ci.outputs.version }}"
         echo "Commit: ${{ github.sha }}"
         echo "Branch: ${{ github.ref_name }}"
         echo "ArgoCD will sync automatically"
