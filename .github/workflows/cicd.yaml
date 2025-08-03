@@ -95,7 +95,7 @@ jobs:
         echo "Version: $VERSION"
         
         # Update deployment.yaml
-        DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
+        DEPLOYMENT_FILE="deployment.yaml"
         if [ -f "$DEPLOYMENT_FILE" ]; then
           # Show current content for debugging
           echo "Current deployment content:"
