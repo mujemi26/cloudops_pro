@@ -115,29 +115,39 @@ jobs:
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
         echo "New image: $NEW_IMAGE"
         
-        # Check if deployment file exists
-        if [ -f "${{ env.GITOPS_PATH }}/deployment.yaml" ]; then
-          echo "Found deployment file at ${{ env.GITOPS_PATH }}/deployment.yaml"
+        # Check if deployment file exists in the correct path
+        DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
+        if [ -f "$DEPLOYMENT_FILE" ]; then
+          echo "Found deployment file at $DEPLOYMENT_FILE"
           # Show current content
           echo "Current deployment content:"
-          cat "${{ env.GITOPS_PATH }}/deployment.yaml"
+          cat "$DEPLOYMENT_FILE"
           
           # Update image in deployment
-          sed -i "s|image:.*|image: $NEW_IMAGE|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
+          sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
           
           echo "Updated deployment with image: $NEW_IMAGE"
           echo "Updated deployment content:"
-          cat "${{ env.GITOPS_PATH }}/deployment.yaml"
+          cat "$DEPLOYMENT_FILE"
         else
-          echo "Deployment file not found at ${{ env.GITOPS_PATH }}/deployment.yaml"
-          echo "Available files in ${{ env.GITOPS_PATH }}:"
-          ls -la "${{ env.GITOPS_PATH }}" || echo "Directory does not exist"
+          echo "Deployment file not found at $DEPLOYMENT_FILE"
+          echo "Available files in Manifests/CloudOps-pro:"
+          ls -la "Manifests/CloudOps-pro" || echo "Directory does not exist"
+          echo "Available files in Manifests:"
+          ls -la "Manifests" || echo "Directory does not exist"
           exit 1
         fi
         
     - name: Commit and push changes
       run: |
         cd gitops-repo
+        
+        # Debug: Check current branch and remote
+        echo "Current branch: $(git branch --show-current)"
+        echo "Available branches:"
+        git branch -a
+        echo "Remote branches:"
+        git branch -r
         
         # Check if there are changes
         if git diff --quiet; then
@@ -154,8 +164,10 @@ jobs:
           
           git commit -m "$COMMIT_MSG"
           
-          # Push to GitOps repository
-          git push origin ${{ env.GITOPS_BRANCH }}
+          # Try to push to the correct branch
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Pushing to branch: $CURRENT_BRANCH"
+          git push origin $CURRENT_BRANCH
           
           echo "Pushed changes to GitOps repository"
         fi
