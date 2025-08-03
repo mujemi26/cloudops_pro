@@ -24,6 +24,9 @@ jobs:
   ci:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      version: ${{ steps.image.outputs.version }}
     
     steps:
     - name: Checkout code
@@ -67,6 +70,9 @@ jobs:
       run: |
         echo "image=${{ steps.image.outputs.image }}" >> $GITHUB_OUTPUT
         echo "version=${{ steps.image.outputs.version }}" >> $GITHUB_OUTPUT
+        echo "Debug - Job outputs:"
+        echo "  image: ${{ steps.image.outputs.image }}"
+        echo "  version: ${{ steps.image.outputs.version }}"
 
   # CD Job - GitOps Deployment
   cd:
@@ -99,6 +105,10 @@ jobs:
         echo "CI outputs:"
         echo "  image: ${{ needs.ci.outputs.image }}"
         echo "  version: ${{ needs.ci.outputs.version }}"
+        
+        # Debug: Check all available outputs
+        echo "All CI job outputs:"
+        echo "  needs.ci.outputs: ${{ toJSON(needs.ci.outputs) }}"
         
         # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
