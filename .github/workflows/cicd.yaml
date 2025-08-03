@@ -65,13 +65,16 @@ jobs:
         
     - name: Output image info
       run: |
-        echo "Image: ${{ steps.meta.outputs.tags }}"
+        echo "All tags: ${{ steps.meta.outputs.tags }}"
+        echo "First tag: $(echo "${{ steps.meta.outputs.tags }}" | head -n1)"
         echo "Digest: ${{ steps.meta.outputs.digest }}"
         
     - name: Set image output
       id: image
       run: |
-        echo "image=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        # Get the first tag (usually the main one we want)
+        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+        echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
         echo "digest=${{ steps.meta.outputs.digest }}" >> $GITHUB_OUTPUT
 
   # CD Job - GitOps Deployment
@@ -90,40 +93,51 @@ jobs:
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
-        path: Manifests/CloudOps-pro
+        path: gitops-repo
         
     - name: Setup GitOps
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
     - name: Update deployment image
       id: update-image
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
+        
+        # Debug: List directory contents
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
         
         # Get the new image tag
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
         echo "New image: $NEW_IMAGE"
         
-        # Update deployment.yaml with new image
+        # Check if deployment file exists
         if [ -f "${{ env.GITOPS_PATH }}/deployment.yaml" ]; then
+          echo "Found deployment file at ${{ env.GITOPS_PATH }}/deployment.yaml"
+          # Show current content
+          echo "Current deployment content:"
+          cat "${{ env.GITOPS_PATH }}/deployment.yaml"
+          
           # Update image in deployment
           sed -i "s|image:.*|image: $NEW_IMAGE|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
           
-          # Update image tag in deployment
-          sed -i "s|tag:.*|tag: ${{ github.sha }}|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
-          
           echo "Updated deployment with image: $NEW_IMAGE"
+          echo "Updated deployment content:"
+          cat "${{ env.GITOPS_PATH }}/deployment.yaml"
         else
           echo "Deployment file not found at ${{ env.GITOPS_PATH }}/deployment.yaml"
+          echo "Available files in ${{ env.GITOPS_PATH }}:"
+          ls -la "${{ env.GITOPS_PATH }}" || echo "Directory does not exist"
           exit 1
         fi
         
     - name: Commit and push changes
       run: |
-        cd Manifests/CloudOps-pro
+        cd gitops-repo
         
         # Check if there are changes
         if git diff --quiet; then
