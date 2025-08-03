@@ -97,8 +97,23 @@ jobs:
         # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
         if [ -f "$DEPLOYMENT_FILE" ]; then
+          # Show current content for debugging
+          echo "Current deployment content:"
+          cat "$DEPLOYMENT_FILE"
+          
+          # Update image field - handles both empty and non-empty image fields
           sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
+          
+          # If the above didn't work (empty image field), try a different approach
+          if ! grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
+            echo "First sed didn't work, trying alternative approach..."
+            # Find the line with 'image:' and replace the entire line
+            sed -i "/image:/c\        image: $NEW_IMAGE" "$DEPLOYMENT_FILE"
+          fi
+          
           echo "Updated deployment with image: $NEW_IMAGE"
+          echo "Updated deployment content:"
+          cat "$DEPLOYMENT_FILE"
         else
           echo "Deployment file not found at $DEPLOYMENT_FILE"
           exit 1
