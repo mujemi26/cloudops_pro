@@ -89,20 +89,13 @@ jobs:
         
     - name: Update deployment image
       run: |
-        # Get the new image tag
-        NEW_IMAGE="${{ needs.ci.outputs.image }}"
-        VERSION="${{ needs.ci.outputs.version }}"
-        echo "New image: $NEW_IMAGE"
+        # Construct the image tag directly in CD job
+        COMMIT_COUNT=$(git rev-list --count HEAD)
+        VERSION="v0.$COMMIT_COUNT"
+        NEW_IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/cloudops-pro:$VERSION"
+        
+        echo "Constructed image: $NEW_IMAGE"
         echo "Version: $VERSION"
-        
-        # Debug: Check if outputs are available
-        echo "CI outputs:"
-        echo "  image: ${{ needs.ci.outputs.image }}"
-        echo "  version: ${{ needs.ci.outputs.version }}"
-        
-        # Debug: Check all available outputs
-        echo "All CI job outputs:"
-        echo "  needs.ci.outputs: ${{ toJSON(needs.ci.outputs) }}"
         
         # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
@@ -111,27 +104,11 @@ jobs:
           echo "Current deployment content:"
           cat "$DEPLOYMENT_FILE"
           
-          # Enhanced image replacement - handles various scenarios
+          # Simple and direct image replacement
           echo "Replacing image with: $NEW_IMAGE"
           
-          # Method 1: Replace any image line (empty or with content)
+          # Replace the image line directly
           sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
-          
-          # Method 2: If Method 1 didn't work, find and replace the specific image line
-          if ! grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
-            echo "Method 1 didn't work, trying Method 2..."
-            # Find the line with 'image:' and replace the entire line with proper indentation
-            sed -i "/image:/c\        image: $NEW_IMAGE" "$DEPLOYMENT_FILE"
-          fi
-          
-          # Method 3: If still not working, use awk to replace the image line
-          if ! grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
-            echo "Method 2 didn't work, trying Method 3 with awk..."
-            awk -v new_image="$NEW_IMAGE" '
-              /image:/ { print "        image: " new_image; next }
-              { print }
-            ' "$DEPLOYMENT_FILE" > "$DEPLOYMENT_FILE.tmp" && mv "$DEPLOYMENT_FILE.tmp" "$DEPLOYMENT_FILE"
-          fi
           
           # Verify the update worked
           if grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
