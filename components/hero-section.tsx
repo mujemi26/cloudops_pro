@@ -102,7 +102,7 @@ export default function HeroSection() {
             className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed"
           >
             Transform your infrastructure with cutting-edge DevOps solutions. We help enterprises and startups achieve
-            faster deployments, reduced costs, and unmatched scalability.
+            faster deployments, reduced costs, and unmatched scalability ! 
           </motion.p>
 
           {/* CTA Buttons */}
