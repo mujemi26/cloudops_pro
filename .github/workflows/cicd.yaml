@@ -100,12 +100,19 @@ jobs:
         
     - name: Update deployment image
       run: |
-        # Use the image and version from CI job
-        NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        # Get version from CI job or construct image tag directly
         VERSION="${{ needs.ci.outputs.version }}"
+        NEW_IMAGE="${{ needs.ci.outputs.image }}"
         
-        echo "Using image from CI job: $NEW_IMAGE"
-        echo "Using version from CI job: $VERSION"
+        # If NEW_IMAGE is empty, construct it using the version
+        if [ -z "$NEW_IMAGE" ]; then
+          echo "Image output is empty, constructing image tag..."
+          NEW_IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/cloudops-pro:$VERSION"
+          echo "Constructed image: $NEW_IMAGE"
+        fi
+        
+        echo "Using image: $NEW_IMAGE"
+        echo "Using version: $VERSION"
         
         # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
