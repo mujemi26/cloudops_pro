@@ -91,13 +91,12 @@ jobs:
         
     - name: Update deployment image
       run: |
-        # Construct the image tag directly in CD job
-        COMMIT_COUNT=$(git rev-list --count HEAD)
-        VERSION="v0.$COMMIT_COUNT"
-        NEW_IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/cloudops-pro:$VERSION"
+        # Use the image and version from CI job
+        NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        VERSION="${{ needs.ci.outputs.version }}"
         
-        echo "Constructed image: $NEW_IMAGE"
-        echo "Version: $VERSION"
+        echo "Using image from CI job: $NEW_IMAGE"
+        echo "Using version from CI job: $VERSION"
         
         # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
