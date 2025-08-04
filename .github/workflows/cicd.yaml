@@ -83,11 +83,20 @@ jobs:
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
+        ref: ${{ env.GITOPS_BRANCH }}
         
     - name: Setup GitOps
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
+        
+    - name: Debug GitOps repository
+      run: |
+        echo "Current branch: $(git branch --show-current)"
+        echo "Repository structure:"
+        find . -type f -name "*.yaml" -o -name "*.yml" | head -20
+        echo "Manifests/CloudOps-pro/ contents:"
+        ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
         
     - name: Update deployment image
       run: |
@@ -105,11 +114,12 @@ jobs:
           echo "Current deployment content:"
           cat "$DEPLOYMENT_FILE"
           
-          # Simple and direct image replacement
-          echo "Replacing image with: $NEW_IMAGE"
+          # Create a backup
+          cp "$DEPLOYMENT_FILE" "${DEPLOYMENT_FILE}.backup"
           
-          # Replace the image line directly
-          sed -i "s|image:.*|image: $NEW_IMAGE|g" "$DEPLOYMENT_FILE"
+          # Update the image using sed (simple and reliable)
+          echo "Updating image to: $NEW_IMAGE"
+          sed -i "s|^[[:space:]]*image:[[:space:]]*.*|        image: $NEW_IMAGE|" "$DEPLOYMENT_FILE"
           
           # Verify the update worked
           if grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
@@ -117,6 +127,8 @@ jobs:
           else
             echo "❌ Failed to update image. Current content:"
             cat "$DEPLOYMENT_FILE"
+            echo "Restoring backup..."
+            cp "${DEPLOYMENT_FILE}.backup" "$DEPLOYMENT_FILE"
             exit 1
           fi
           
@@ -124,6 +136,8 @@ jobs:
           cat "$DEPLOYMENT_FILE"
         else
           echo "Deployment file not found at $DEPLOYMENT_FILE"
+          echo "Available files in Manifests/CloudOps-pro/:"
+          ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
           exit 1
         fi
         
