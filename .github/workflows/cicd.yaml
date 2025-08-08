@@ -13,7 +13,7 @@ on:
         type: choice
         options:
         - dev
-        - production
+        - prod
 
 env:
   DOCKER_IMAGE: cloudops-pro
@@ -30,6 +30,9 @@ jobs:
     outputs:
       image: ${{ steps.image.outputs.image }}
       version: ${{ steps.image.outputs.version }}
+    env:
+      # Set IMAGE_ENV based on branch
+      IMAGE_ENV: ${{ github.ref_name == 'prod' && 'prod' || 'dev' }}
     
     steps:
     - name: Checkout code
@@ -50,11 +53,13 @@ jobs:
         # Get commit SHA and timestamp for unique versioning
         COMMIT_SHA=$(git rev-parse --short HEAD)
         TIMESTAMP=$(date +%s)
-        VERSION="v0.$TIMESTAMP-$COMMIT_SHA"
+        # Use IMAGE_ENV for tag
+        VERSION="${IMAGE_ENV}-${COMMIT_SHA}"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Generated version: $VERSION"
         echo "Commit SHA: $COMMIT_SHA"
         echo "Timestamp: $TIMESTAMP"
+        echo "IMAGE_ENV: $IMAGE_ENV"
         
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -104,21 +109,15 @@ jobs:
         
     - name: Update deployment image
       run: |
-        # Get version from CI job or construct image tag directly
         VERSION="${{ needs.ci.outputs.version }}"
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
-        
-        # If NEW_IMAGE is empty, construct it using the version
         if [ -z "$NEW_IMAGE" ]; then
           echo "Image output is empty, constructing image tag..."
           NEW_IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/cloudops-pro:$VERSION"
           echo "Constructed image: $NEW_IMAGE"
         fi
-        
         echo "Using image: $NEW_IMAGE"
         echo "Using version: $VERSION"
-        
-        # Update deployment.yaml
         DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
         if [ -f "$DEPLOYMENT_FILE" ]; then
           # Show current content for debugging
@@ -183,4 +182,5 @@ jobs:
         echo "Image: ${{ needs.ci.outputs.image }}"
         echo "Version: ${{ needs.ci.outputs.version }}"
         echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "ArgoCD will sync automatically"
         echo "ArgoCD will sync automatically"
