@@ -35,13 +35,13 @@ export default function WhyChooseUsSection() {
   ]
 
   const trustLogos = [
-    { name: "AWS", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/aws.svg-VpWwZ4yCgGkIqgQYgY8Z8Z8Z8Z8Z8Z.svg" },
-    { name: "Azure", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/azure.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
-    { name: "Google Cloud", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/gcp.svg-YgYgYgYgYgYgYgYgYgYgYgYgYgYgYg.svg" },
-    { name: "Kubernetes", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/kubernetes.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
-    { name: "Docker", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/docker.svg-VpWwZ4yCgGkIqgQYgY8Z8Z8Z8Z8Z8Z.svg" },
-    { name: "Terraform", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/terraform.svg-YgYgYgYgYgYgYgYgYgYgYgYgYgYgYg.svg" },
-    { name: "GitLab", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/gitlab.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
+    { name: "AWS", logo: "https://cdn.worldvectorlogo.com/logos/aws-2.svg" },
+    { name: "Azure", logo: "https://cdn.worldvectorlogo.com/logos/microsoft-azure-2.svg" },
+    { name: "Google Cloud", logo: "https://cdn.worldvectorlogo.com/logos/google-cloud-1.svg" },
+    { name: "Kubernetes", logo: "https://cdn.worldvectorlogo.com/logos/kubernetes.svg" },
+    { name: "Docker", logo: "https://cdn.worldvectorlogo.com/logos/docker.svg" },
+    { name: "Terraform", logo: "https://cdn.worldvectorlogo.com/logos/terraform.svg" },
+    { name: "GitLab", logo: "https://cdn.worldvectorlogo.com/logos/gitlab.svg" },
   ]
 
   return (
