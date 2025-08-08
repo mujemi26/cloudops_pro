@@ -17,7 +17,7 @@ const caseStudies = [
       { metric: "50%", label: "Cost Reduction", icon: DollarSign },
     ],
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ecommerce.jpg-KtOmU4glRwoEf38xH89JJ9z5PZ41hI.jpeg",
-    bgColor: "from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30",
+    bgColor: "from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-800",
   },
   {
     title: "FinTech Startup Scaling",
@@ -30,7 +30,7 @@ const caseStudies = [
       { metric: "100%", label: "Compliance Score", icon: TrendingUp },
     ],
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/fintech.jpg-ra4mmWSDIIZ6zT2ouoJASPoinfeLyu.jpeg",
-    bgColor: "from-green-50 to-teal-50 dark:from-green-900/30 dark:to-teal-900/30",
+    bgColor: "from-green-50 to-teal-50 dark:from-green-900 dark:to-teal-800",
   },
   {
     title: "Healthcare Platform Modernization",
@@ -43,7 +43,7 @@ const caseStudies = [
       { metric: "100%", label: "HIPAA Compliant", icon: TrendingUp },
     ],
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/health.jpg-CFzzT6XWZ0cIIHM9u5BVOe9KXCLVrr.jpeg",
-    bgColor: "from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30",
+    bgColor: "from-purple-50 to-pink-50 dark:from-purple-900 dark:to-pink-800",
   },
 ]
 
@@ -64,7 +64,7 @@ const CaseStudyCard = ({ study, i, progress, range, targetScale }: any) => {
             {/* Content */}
             <CardContent className="p-8 lg:p-12 flex flex-col justify-center">
               <div className="mb-6">
-                <span className="inline-block px-3 py-1 bg-white/70 dark:bg-gray-800/70 text-blue-800 dark:text-blue-300 text-sm font-medium rounded-full mb-4">
+                <span className="inline-block px-3 py-1 bg-white/70 dark:bg-gray-700 text-blue-800 dark:text-blue-300 text-sm font-medium rounded-full mb-4">
                   {study.industry}
                 </span>
                 <h3 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -85,7 +85,7 @@ const CaseStudyCard = ({ study, i, progress, range, targetScale }: any) => {
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Results</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {study.results.map((result: any, index: number) => (
-                      <div key={index} className="text-center p-4 bg-white/50 dark:bg-gray-900/50 rounded-lg">
+                      <div key={index} className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg">
                         <result.icon className="w-6 h-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
                         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                           {result.metric}

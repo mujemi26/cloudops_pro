@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import Particles from "react-tsparticles"
-import type { Container, Engine, ISourceOptions } from "@tsparticles/engine"
+import type { Container, Engine, ISourceOptions } from "tsparticles-engine"
 import { loadSlim } from "tsparticles-slim"
 import { useTheme } from "next-themes"
 
