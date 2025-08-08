@@ -1,11 +1,12 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, Variants } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Play, Cloud, Zap, Shield } from "lucide-react"
+import { ArrowRight, Play, Zap } from "lucide-react"
+import ParticleBackground from "./particle-background"
 
 export default function HeroSection() {
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -16,56 +17,41 @@ export default function HeroSection() {
     },
   }
 
-  const itemVariants = {
+  const headlineContainerVariants: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.08,
+      },
+    },
+  }
+
+  const wordVariants: Variants = {
+    hidden: { opacity: 0, y: 25 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    },
+  }
+
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" },
+      transition: { duration: 0.6, ease: "easeOut", delay: 0.8 },
     },
   }
-
-  const floatingIcons = [
-    { icon: Cloud, delay: 0, x: 100, y: 50 },
-    { icon: Zap, delay: 1, x: -80, y: 80 },
-    { icon: Shield, delay: 2, x: 120, y: -60 },
-  ]
 
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl"></div>
+        <ParticleBackground />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
       </div>
-
-      {/* Floating Icons */}
-      {floatingIcons.map((item, index) => (
-        <motion.div
-          key={index}
-          className="absolute hidden lg:block"
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: 0.1,
-            scale: 1,
-            x: [0, item.x, 0],
-            y: [0, item.y, 0],
-          }}
-          transition={{
-            duration: 8,
-            delay: item.delay,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-            ease: "easeInOut",
-          }}
-          style={{
-            left: `${20 + index * 20}%`,
-            top: `${30 + index * 15}%`,
-          }}
-        >
-          <item.icon className="w-16 h-16 text-blue-600" />
-        </motion.div>
-      ))}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
@@ -85,15 +71,19 @@ export default function HeroSection() {
 
           {/* Main Headline */}
           <motion.h1
-            variants={itemVariants}
-            className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight"
+            variants={headlineContainerVariants}
+            className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tighter text-gray-900 dark:text-white mb-6 leading-tight"
           >
-            Accelerate Your{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Cloud Journey
+            <motion.span variants={wordVariants} className="inline-block mr-3">Accelerate</motion.span>
+            <motion.span variants={wordVariants} className="inline-block mr-3">Your</motion.span>
+            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent inline-block">
+              <motion.span variants={wordVariants} className="inline-block mr-3">Cloud</motion.span>
+              <motion.span variants={wordVariants} className="inline-block">Journey</motion.span>
             </span>
             <br />
-            with DevOps Excellence
+            <motion.span variants={wordVariants} className="inline-block mr-3">with</motion.span>
+            <motion.span variants={wordVariants} className="inline-block mr-3">DevOps</motion.span>
+            <motion.span variants={wordVariants} className="inline-block">Excellence</motion.span>
           </motion.h1>
 
           {/* Subtitle */}

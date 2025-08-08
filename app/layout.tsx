@@ -1,9 +1,8 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
 import "./globals.css"
-
-const inter = Inter({ subsets: ["latin"] })
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
   title: "CloudOps Pro - DevOps Solutions & Cloud Infrastructure Services",
@@ -15,12 +14,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
+      <body className={GeistSans.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

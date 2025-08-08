@@ -7,6 +7,7 @@ import WhyChooseUsSection from "@/components/why-choose-us-section"
 import CaseStudiesSection from "@/components/case-studies-section"
 import TechnologiesSection from "@/components/technologies-section"
 import TestimonialsSection from "@/components/testimonials-section"
+import FaqSection from "@/components/faq-section"
 import ContactSection from "@/components/contact-section"
 import Footer from "@/components/footer"
 import ChatWidget from "@/components/chat-widget"
@@ -51,6 +52,7 @@ export default function HomePage() {
         <CaseStudiesSection />
         <TechnologiesSection />
         <TestimonialsSection />
+        <FaqSection />
         <ContactSection />
       </main>
       <Footer />

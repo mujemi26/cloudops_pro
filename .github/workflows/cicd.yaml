@@ -1,10 +1,9 @@
 name: CI/CD Pipeline
 
 on:
-  # push:
-  #   branches: [ dev ]
-  # pull_request:
-  #   branches: [ dev ]
+  push:
+    branches:
+      - dev
   workflow_dispatch:
     inputs:
       environment:
@@ -14,13 +13,13 @@ on:
         type: choice
         options:
         - dev
-        - production
+        - prod
 
 env:
   DOCKER_IMAGE: cloudops-pro
   DOCKER_REGISTRY: docker.io
   GITOPS_REPO: mujemi26/GitOps
-  GITOPS_BRANCH: main
+  GITOPS_BRANCH: master
   GITOPS_PATH: Manifests/CloudOps-pro
 
 jobs:
@@ -28,6 +27,12 @@ jobs:
   ci:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      version: ${{ steps.image.outputs.version }}
+    env:
+      # Set IMAGE_ENV based on branch
+      IMAGE_ENV: ${{ github.ref_name == 'prod' && 'prod' || 'dev' }}
     
     steps:
     - name: Checkout code
@@ -42,89 +47,149 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
         
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-          
+    - name: Generate version
+      id: version
+      run: |
+        # Get commit SHA and timestamp for unique versioning
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        TIMESTAMP=$(date +%s)
+        # Use IMAGE_ENV for tag
+        VERSION="${IMAGE_ENV}-${COMMIT_SHA}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+        echo "Commit SHA: $COMMIT_SHA"
+        echo "Timestamp: $TIMESTAMP"
+        echo "IMAGE_ENV: $IMAGE_ENV"
+        
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        
-    - name: Output image info
-      run: |
-        echo "Image: ${{ steps.meta.outputs.tags }}"
-        echo "Digest: ${{ steps.meta.outputs.digest }}"
         
     - name: Set image output
       id: image
       run: |
-        echo "image=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
-        echo "digest=${{ steps.meta.outputs.digest }}" >> $GITHUB_OUTPUT
+        IMAGE_TAG="${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}"
+        echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+        echo "Image: $IMAGE_TAG"
+        
+
 
   # CD Job - GitOps Deployment
   cd:
     name: Deploy to Kubernetes via GitOps
     runs-on: ubuntu-latest
     needs: ci
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
     - name: Checkout GitOps repository
       uses: actions/checkout@v4
       with:
         repository: ${{ env.GITOPS_REPO }}
         token: ${{ secrets.GITOPS_TOKEN }}
-        path: Manifests/CloudOps-pro
+        ref: ${{ env.GITOPS_BRANCH }}
         
     - name: Setup GitOps
       run: |
-        cd Manifests/CloudOps-pro
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
-    - name: Update deployment image
-      id: update-image
+    - name: Debug GitOps repository
       run: |
-        cd Manifests/CloudOps-pro
+        echo "Current branch: $(git branch --show-current)"
+        echo "Repository structure:"
+        find . -type f -name "*.yaml" -o -name "*.yml" | head -20
+        echo "Manifests/CloudOps-pro/ contents:"
+        ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
         
-        # Get the new image tag
+    - name: Update deployment image
+      run: |
+        VERSION="${{ needs.ci.outputs.version }}"
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
-        echo "New image: $NEW_IMAGE"
-        
-        # Update deployment.yaml with new image
-        if [ -f "${{ env.GITOPS_PATH }}/deployment.yaml" ]; then
-          # Update image in deployment
-          sed -i "s|image:.*|image: $NEW_IMAGE|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
+        if [ -z "$NEW_IMAGE" ]; then
+          echo "Image output is empty, constructing image tag..."
+          NEW_IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/cloudops-pro:$VERSION"
+          echo "Constructed image: $NEW_IMAGE"
+        fi
+        echo "Using image: $NEW_IMAGE"
+        echo "Using version: $VERSION"
+        DEPLOYMENT_FILE="Manifests/CloudOps-pro/deployment.yaml"
+        if [ -f "$DEPLOYMENT_FILE" ]; then
+          # Show current content for debugging
+          echo "Current deployment content:"
+          cat "$DEPLOYMENT_FILE"
           
-          # Update image tag in deployment
-          sed -i "s|tag:.*|tag: ${{ github.sha }}|g" "${{ env.GITOPS_PATH }}/deployment.yaml"
+          # Create a backup
+          cp "$DEPLOYMENT_FILE" "${DEPLOYMENT_FILE}.backup"
           
-          echo "Updated deployment with image: $NEW_IMAGE"
+          # Update the image using sed (simple and reliable)
+          echo "Updating image to: $NEW_IMAGE"
+          sed -i "s|^[[:space:]]*image:[[:space:]]*.*|        image: $NEW_IMAGE|" "$DEPLOYMENT_FILE"
+          
+          # Verify the update worked
+          if grep -q "image: $NEW_IMAGE" "$DEPLOYMENT_FILE"; then
+            echo "✅ Successfully updated deployment with image: $NEW_IMAGE"
+          else
+            echo "❌ Failed to update image. Current content:"
+            cat "$DEPLOYMENT_FILE"
+            echo "Restoring backup..."
+            cp "${DEPLOYMENT_FILE}.backup" "$DEPLOYMENT_FILE"
+            exit 1
+          fi
+          
+          echo "Updated deployment content:"
+          cat "$DEPLOYMENT_FILE"
         else
-          echo "Deployment file not found at ${{ env.GITOPS_PATH }}/deployment.yaml"
+          echo "Deployment file not found at $DEPLOYMENT_FILE"
+          echo "Available files in Manifests/CloudOps-pro/:"
+          ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
+          exit 1
+        fi
+        
+    - name: Update Helm values image tag
+      run: |
+        VERSION="${{ needs.ci.outputs.version }}"
+        NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        # Use branch name to select values file
+        if [ "${{ github.ref_name }}" = "prod" ]; then
+          ENV_FILE="Manifests/CloudOps-pro/values-prod.yaml"
+        else
+          ENV_FILE="Manifests/CloudOps-pro/values-dev.yaml"
+        fi
+        echo "Updating $ENV_FILE with tag: $VERSION"
+        if [ -f "$ENV_FILE" ]; then
+          # Show current content for debugging
+          echo "Current $ENV_FILE content:"
+          cat "$ENV_FILE"
+          # Create a backup
+          cp "$ENV_FILE" "${ENV_FILE}.backup"
+          # Update the tag field
+          sed -i "s|^[[:space:]]*tag:[[:space:]]*.*|  tag: $VERSION|" "$ENV_FILE"
+          # Verify the update worked
+          if grep -q "tag: $VERSION" "$ENV_FILE"; then
+            echo "✅ Successfully updated $ENV_FILE with tag: $VERSION"
+          else
+            echo "❌ Failed to update tag. Current content:"
+            cat "$ENV_FILE"
+            echo "Restoring backup..."
+            cp "${ENV_FILE}.backup" "$ENV_FILE"
+            exit 1
+          fi
+          echo "Updated $ENV_FILE content:"
+          cat "$ENV_FILE"
+        else
+          echo "File not found: $ENV_FILE"
+          ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
           exit 1
         fi
         
     - name: Commit and push changes
       run: |
-        cd Manifests/CloudOps-pro
-        
         # Check if there are changes
         if git diff --quiet; then
           echo "No changes to commit"
@@ -132,79 +197,27 @@ jobs:
           # Add all changes
           git add .
           
-          # Commit with meaningful message
-          COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }}"
+          # Commit with version info
+          VERSION="${{ needs.ci.outputs.version }}"
+          COMMIT_MSG="Update CloudOps Pro image to ${{ needs.ci.outputs.image }} (Version: $VERSION)"
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             COMMIT_MSG="$COMMIT_MSG (Manual deployment to ${{ github.event.inputs.environment }})"
           fi
           
           git commit -m "$COMMIT_MSG"
           
-          # Push to GitOps repository
-          git push origin ${{ env.GITOPS_BRANCH }}
+          # Push to current branch
+          CURRENT_BRANCH=$(git branch --show-current)
+          git push origin $CURRENT_BRANCH
           
           echo "Pushed changes to GitOps repository"
         fi
         
-    - name: Wait for ArgoCD sync
-      run: |
-        echo "Waiting for ArgoCD to detect changes..."
-        echo "ArgoCD will automatically sync the deployment"
-        echo "You can monitor the sync status in your ArgoCD dashboard"
-        
     - name: Notify deployment
       run: |
-        echo "🚀 Deployment initiated!"
+        echo "🚀 Deployment completed!"
         echo "Image: ${{ needs.ci.outputs.image }}"
-        echo "Commit: ${{ github.sha }}"
-        echo "Branch: ${{ github.ref_name }}"
+        echo "Version: ${{ needs.ci.outputs.version }}"
+        echo "Environment: ${{ github.event.inputs.environment }}"
         echo "ArgoCD will sync automatically"
-
-  # Security Scan Job
-  # security-scan:
-  #   name: Security Scan
-  #   runs-on: ubuntu-latest
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Run Trivy vulnerability scanner
-  #     uses: aquasecurity/trivy-action@master
-  #     with:
-  #       image-ref: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-  #       format: 'sarif'
-  #       output: 'trivy-results.sarif'
-        
-  #   - name: Upload Trivy scan results to GitHub Security tab
-  #     uses: github/codeql-action/upload-sarif@v3
-  #     if: always()
-  #     with:
-  #       sarif_file: 'trivy-results.sarif'
-
-  # Test Job
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
-  #       cache: 'npm'
-        
-  #   - name: Install dependencies
-  #     run: npm ci
-      
-  #   - name: Run linting
-  #     run: npm run lint
-      
-  #   - name: Run tests (if available)
-  #     run: npm test --if-present
-      
-  #   - name: Build application
-  #     run: npm run build
+        echo "ArgoCD will sync automatically"
