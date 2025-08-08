@@ -2,7 +2,8 @@
 
 import { motion, Variants } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Play, Cloud, Zap, Shield } from "lucide-react"
+import { ArrowRight, Play, Zap } from "lucide-react"
+import ParticleBackground from "./particle-background"
 
 export default function HeroSection() {
   const containerVariants: Variants = {
@@ -25,47 +26,14 @@ export default function HeroSection() {
     },
   }
 
-  const floatingIcons = [
-    { icon: Cloud, delay: 0, x: 100, y: 50 },
-    { icon: Zap, delay: 1, x: -80, y: 80 },
-    { icon: Shield, delay: 2, x: 120, y: -60 },
-  ]
-
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl"></div>
+        <ParticleBackground />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
       </div>
-
-      {/* Floating Icons */}
-      {floatingIcons.map((item, index) => (
-        <motion.div
-          key={index}
-          className="absolute hidden lg:block"
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: 0.1,
-            scale: 1,
-            x: [0, item.x, 0],
-            y: [0, item.y, 0],
-          }}
-          transition={{
-            duration: 8,
-            delay: item.delay,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-            ease: "easeInOut",
-          }}
-          style={{
-            left: `${20 + index * 20}%`,
-            top: `${30 + index * 15}%`,
-          }}
-        >
-          <item.icon className="w-16 h-16 text-blue-600" />
-        </motion.div>
-      ))}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
