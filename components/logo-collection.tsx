@@ -11,21 +11,12 @@ const KubernetesLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const TerraformLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <path d="M1.99805 1.99805H9.99902L15.002 6.99902V15.002L9.99902 20.001H1.99805V1.99805Z" fill="#5C4EE5"/>
-    <path d="M15.002 6.99902L9.99902 11.998V20.001L15.002 15.002V6.99902Z" fill="#7B4EE5"/>
-    <path d="M9.99902 1.99805H15.002L22.002 6.99902V15.002L15.002 20.001L9.99902 15.002V1.99805Z" fill="#5C4EE5"/>
-    <path d="M15.002 6.99902V15.002L22.002 11.998V6.99902L15.002 6.99902Z" fill="#7B4EE5"/>
-  </svg>
-);
-
 export const trustLogos = [
     { name: "AWS", logo: "https://cdn.worldvectorlogo.com/logos/aws-2.svg" },
     { name: "Azure", logo: "https://cdn.worldvectorlogo.com/logos/microsoft-azure-2.svg" },
     { name: "Google Cloud", logo: "https://cdn.worldvectorlogo.com/logos/google-cloud-1.svg" },
     { name: "Kubernetes", logo: KubernetesLogo },
     { name: "Docker", logo: "https://cdn.worldvectorlogo.com/logos/docker.svg" },
-    { name: "Terraform", logo: TerraformLogo },
+    { name: "Terraform", logo: "https://www.vectorlogo.zone/logos/terraformio/terraformio-ar21.svg" },
     { name: "GitLab", logo: "https://cdn.worldvectorlogo.com/logos/gitlab.svg" },
 ];
