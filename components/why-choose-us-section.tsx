@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Zap, DollarSign, TrendingUp, Headphones, Award, Users } from "lucide-react"
 import LogoMarquee from "./logo-marquee"
+import { trustLogos } from "./logo-collection"
 
 export default function WhyChooseUsSection() {
   const benefits = [
@@ -32,16 +33,6 @@ export default function WhyChooseUsSection() {
       description: "24/7 support from certified DevOps engineers and cloud architects with years of experience.",
       metric: "24/7 Support",
     },
-  ]
-
-  const trustLogos = [
-    { name: "AWS", logo: "https://cdn.worldvectorlogo.com/logos/aws-2.svg" },
-    { name: "Azure", logo: "https://cdn.worldvectorlogo.com/logos/microsoft-azure-2.svg" },
-    { name: "Google Cloud", logo: "https://cdn.worldvectorlogo.com/logos/google-cloud-1.svg" },
-    { name: "Kubernetes", logo: "https://cdn.worldvectorlogo.com/logos/kubernetes.svg" },
-    { name: "Docker", logo: "https://cdn.worldvectorlogo.com/logos/docker.svg" },
-    { name: "Terraform", logo: "https://cdn.worldvectorlogo.com/logos/terraform.svg" },
-    { name: "GitLab", logo: "https://cdn.worldvectorlogo.com/logos/gitlab.svg" },
   ]
 
   return (
