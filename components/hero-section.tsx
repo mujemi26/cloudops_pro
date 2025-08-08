@@ -54,7 +54,7 @@ export default function HeroSection() {
           {/* Main Headline */}
           <motion.h1
             variants={itemVariants}
-            className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight"
+            className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tighter text-gray-900 dark:text-white mb-6 leading-tight"
           >
             Accelerate Your{" "}
             <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -70,7 +70,7 @@ export default function HeroSection() {
             className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed"
           >
             Transform your infrastructure with cutting-edge DevOps solutions. We help enterprises and startups achieve
-            faster deployments, reduced costs, and unmatched scalability !!! Test !!!
+            faster deployments, reduced costs, and unmatched scalability.
           </motion.p>
 
           {/* CTA Buttons */}
