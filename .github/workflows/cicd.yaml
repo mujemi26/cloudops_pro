@@ -151,6 +151,43 @@ jobs:
           exit 1
         fi
         
+    - name: Update Helm values image tag
+      run: |
+        VERSION="${{ needs.ci.outputs.version }}"
+        NEW_IMAGE="${{ needs.ci.outputs.image }}"
+        # Determine which values file to update
+        if [ "${{ needs.ci.outputs.version }}" != "" ]; then
+          ENV_FILE="values-${{ needs.ci.outputs.version%%-* }}.yaml"
+        else
+          ENV_FILE="values-dev.yaml"
+        fi
+        echo "Updating $ENV_FILE with tag: $VERSION"
+        if [ -f "$ENV_FILE" ]; then
+          # Show current content for debugging
+          echo "Current $ENV_FILE content:"
+          cat "$ENV_FILE"
+          # Create a backup
+          cp "$ENV_FILE" "${ENV_FILE}.backup"
+          # Update the tag field
+          sed -i "s|^[[:space:]]*tag:[[:space:]]*.*|  tag: $VERSION|" "$ENV_FILE"
+          # Verify the update worked
+          if grep -q "tag: $VERSION" "$ENV_FILE"; then
+            echo "✅ Successfully updated $ENV_FILE with tag: $VERSION"
+          else
+            echo "❌ Failed to update tag. Current content:"
+            cat "$ENV_FILE"
+            echo "Restoring backup..."
+            cp "${ENV_FILE}.backup" "$ENV_FILE"
+            exit 1
+          fi
+          echo "Updated $ENV_FILE content:"
+          cat "$ENV_FILE"
+        else
+          echo "File not found: $ENV_FILE"
+          ls -la . || echo "Directory not found"
+          exit 1
+        fi
+        
     - name: Commit and push changes
       run: |
         # Check if there are changes
