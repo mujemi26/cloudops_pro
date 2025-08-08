@@ -17,12 +17,30 @@ export default function HeroSection() {
     },
   }
 
+  const headlineContainerVariants: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.08,
+      },
+    },
+  }
+
+  const wordVariants: Variants = {
+    hidden: { opacity: 0, y: 25 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    },
+  }
+
   const itemVariants: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" },
+      transition: { duration: 0.6, ease: "easeOut", delay: 0.8 },
     },
   }
 
@@ -53,15 +71,19 @@ export default function HeroSection() {
 
           {/* Main Headline */}
           <motion.h1
-            variants={itemVariants}
+            variants={headlineContainerVariants}
             className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tighter text-gray-900 dark:text-white mb-6 leading-tight"
           >
-            Accelerate Your{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Cloud Journey
+            <motion.span variants={wordVariants} className="inline-block mr-3">Accelerate</motion.span>
+            <motion.span variants={wordVariants} className="inline-block mr-3">Your</motion.span>
+            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent inline-block">
+              <motion.span variants={wordVariants} className="inline-block mr-3">Cloud</motion.span>
+              <motion.span variants={wordVariants} className="inline-block">Journey</motion.span>
             </span>
             <br />
-            with DevOps Excellence
+            <motion.span variants={wordVariants} className="inline-block mr-3">with</motion.span>
+            <motion.span variants={wordVariants} className="inline-block mr-3">DevOps</motion.span>
+            <motion.span variants={wordVariants} className="inline-block">Excellence</motion.span>
           </motion.h1>
 
           {/* Subtitle */}
