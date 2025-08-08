@@ -155,11 +155,11 @@ jobs:
       run: |
         VERSION="${{ needs.ci.outputs.version }}"
         NEW_IMAGE="${{ needs.ci.outputs.image }}"
-        # Determine which values file to update
-        if [ "${{ needs.ci.outputs.version }}" != "" ]; then
-          ENV_FILE="values-${{ needs.ci.outputs.version%%-* }}.yaml"
+        # Use branch name to select values file
+        if [ "${{ github.ref_name }}" = "prod" ]; then
+          ENV_FILE="Manifests/CloudOps-pro/values-prod.yaml"
         else
-          ENV_FILE="values-dev.yaml"
+          ENV_FILE="Manifests/CloudOps-pro/values-dev.yaml"
         fi
         echo "Updating $ENV_FILE with tag: $VERSION"
         if [ -f "$ENV_FILE" ]; then
@@ -184,7 +184,7 @@ jobs:
           cat "$ENV_FILE"
         else
           echo "File not found: $ENV_FILE"
-          ls -la . || echo "Directory not found"
+          ls -la "Manifests/CloudOps-pro/" || echo "Directory not found"
           exit 1
         fi
         
