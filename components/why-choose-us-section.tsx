@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Zap, DollarSign, TrendingUp, Headphones, Award, Users } from "lucide-react"
+import LogoMarquee from "./logo-marquee"
 
 export default function WhyChooseUsSection() {
   const benefits = [
@@ -33,11 +34,14 @@ export default function WhyChooseUsSection() {
     },
   ]
 
-  const trustBadges = [
-    { name: "AWS Advanced Partner", logo: "/placeholder.svg?height=60&width=120" },
-    { name: "Azure Gold Partner", logo: "/placeholder.svg?height=60&width=120" },
-    { name: "Google Cloud Partner", logo: "/placeholder.svg?height=60&width=120" },
-    { name: "CNCF Member", logo: "/placeholder.svg?height=60&width=120" },
+  const trustLogos = [
+    { name: "AWS", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/aws.svg-VpWwZ4yCgGkIqgQYgY8Z8Z8Z8Z8Z8Z.svg" },
+    { name: "Azure", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/azure.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
+    { name: "Google Cloud", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/gcp.svg-YgYgYgYgYgYgYgYgYgYgYgYgYgYgYg.svg" },
+    { name: "Kubernetes", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/kubernetes.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
+    { name: "Docker", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/docker.svg-VpWwZ4yCgGkIqgQYgY8Z8Z8Z8Z8Z8Z.svg" },
+    { name: "Terraform", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/terraform.svg-YgYgYgYgYgYgYgYgYgYgYgYgYgYgYg.svg" },
+    { name: "GitLab", logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/gitlab.svg-Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8.svg" },
   ]
 
   return (
@@ -100,19 +104,9 @@ export default function WhyChooseUsSection() {
           viewport={{ once: true }}
         >
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
-            Trusted Partnerships & Certifications
+            Trusted by Industry Leaders & Partners
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center">
-            {trustBadges.map((badge, index) => (
-              <motion.div
-                key={index}
-                className="grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110"
-                whileHover={{ scale: 1.1 }}
-              >
-                <img src={badge.logo || "/placeholder.svg"} alt={badge.name} className="h-12 w-auto object-contain" />
-              </motion.div>
-            ))}
-          </div>
+          <LogoMarquee logos={trustLogos} />
         </motion.div>
 
         {/* Stats Section */}
